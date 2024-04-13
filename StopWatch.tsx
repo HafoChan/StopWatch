@@ -5,10 +5,7 @@ function Timer({ interval }: { interval: string }) {
   return <Text style={styles.timer}>{interval}</Text>;
 }
 
-function Timer2({ interval, visible }: { interval: string, visible: boolean }) {
-  if (!visible) {
-    return null;
-  }
+function Timer2({ interval }: { interval: string }) {
   return <Text style={styles.timer2}>{interval}</Text>;
 }
 
@@ -18,7 +15,7 @@ const StopWatch = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [startTimestamp, setStartTimestamp] = useState<number | null>(null); // Thời gian bắt đầu của stop watch
   const [showTimer2, setShowTimer2] = useState(false); // Kiểm soát việc hiển thị của Timer2
-  const [showLapTime, setShowLapTime] = useState(false); // Kiểm soát việc hiển thị của lapTime
+  const [firstStart, setFirstStart] = useState(true); // Kiểm soát việc lap đầu tiên đã được tính hay chưa
 
   const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -41,10 +38,12 @@ const StopWatch = () => {
   const toggleTimer = () => {
     setIsRunning((prevIsRunning) => !prevIsRunning);
     setShowTimer2(true); // Hiển thị Timer2 khi bấm nút Start
-    setShowLapTime(true); // Hiển thị lapTime khi bấm nút Start
     if (!isRunning) {
       const currentTime = Date.now();
-      setStartTimestamp(currentTime); // Lưu thời gian bắt đầu của stop watch
+      if (firstStart) {
+        setFirstStart(false);
+        setStartTimestamp(currentTime); // Lưu thời gian bắt đầu của stop watch
+      }
     }
   };
 
@@ -53,21 +52,18 @@ const StopWatch = () => {
     setIsRunning(false);
     setLaps([]);
     setShowTimer2(false); // Ẩn Timer2 khi reset
-    setShowLapTime(false); // Ẩn lapTime khi reset
+    setFirstStart(true); // Đặt lại trạng thái lap đầu tiên
   };
 
   const lapTimer = () => {
     if (isRunning) {
       const currentTime = Date.now(); // Thời gian bấm lap hiện tại
-      let lapTime: number;
-      if (startTimestamp) {
-        lapTime = currentTime - startTimestamp;
-      } else {
-        lapTime = 0;
+      if (!firstStart) {
+        const lapTime = currentTime - (startTimestamp || currentTime);
+        setLaps((prevLaps) => [...prevLaps, lapTime]);
+        setShowTimer2(true); // Hiển thị Timer2 khi bấm nút Lap
+        setStartTimestamp(currentTime); // Lưu thời gian bắt đầu của lap mới
       }
-      setLaps((prevLaps) => [...prevLaps, lapTime]);
-      setStartTimestamp(currentTime); // Cập nhật thời gian bắt đầu của lap mới
-      setShowTimer2(true); // Hiển thị Timer2 khi bấm nút Lap
     }
   };
 
@@ -109,16 +105,13 @@ const StopWatch = () => {
           {laps.map((lap, index) => (
             <View style={styles.lapRow} key={index}>
               <Text style={styles.lapText}>Lap {index + 1}</Text>
-              <Timer2 interval={formatTime(time)} visible={index === laps.length - 1 && showTimer2} />
-              <Text style={styles.lapTime}>{formatTime(lap)}</Text>
+              {index === laps.length - 1 && showTimer2 ? (
+                <Timer2 interval={formatTime(time)} />
+              ) : (
+                <Text style={styles.lapTime}>{formatTime(lap)}</Text>
+              )}
             </View>
           ))}
-          {showLapTime && (
-            <View style={styles.lapRow}>
-              <Text style={styles.lapText}>Current Lap</Text>
-              <Timer2 interval={formatTime(time)} visible={showTimer2} />
-            </View>
-          )}
         </View>
       </View>
     </View>
